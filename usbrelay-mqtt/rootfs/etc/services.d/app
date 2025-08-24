@@ -1,0 +1,46 @@
+#!/usr/bin/env sh
+set -e
+
+OPTS="/data/options.json"
+
+get_json () {
+  python3 - "$1" <<'PY'
+import json, sys
+path = "/data/options.json"
+key = sys.argv[1]
+try:
+    with open(path) as f:
+        o = json.load(f)
+    v = o.get(key, "")
+    if isinstance(v, bool):
+        print("true" if v else "false")
+    else:
+        print(v)
+except Exception:
+    print("")
+PY
+}
+
+# Options.json'dan oku; boşsa makul varsayılanlar
+export MQTT_HOST="$(get_json mqtt_host)";      [ -z "$MQTT_HOST" ] && MQTT_HOST="core-mosquitto"
+export MQTT_PORT="$(get_json mqtt_port)";      [ -z "$MQTT_PORT" ] && MQTT_PORT=1883
+export MQTT_USER="$(get_json mqtt_username)"
+export MQTT_PASS="$(get_json mqtt_password)"
+export BASE_TOPIC="$(get_json base_topic)";    [ -z "$BASE_TOPIC" ] && BASE_TOPIC="usbrelay"
+export DISCOVERY_PREFIX="$(get_json discovery_prefix)"; [ -z "$DISCOVERY_PREFIX" ] && DISCOVERY_PREFIX="homeassistant"
+export CLIENT_NAME="$(get_json client_name)";  [ -z "$CLIENT_NAME" ] && CLIENT_NAME="usbrelay-bridge"
+export POLL_SECONDS="$(get_json poll_seconds)";[ -z "$POLL_SECONDS" ] && POLL_SECONDS=2
+export RETAIN="$(get_json retain)";            [ -z "$RETAIN" ] && RETAIN=false
+export QOS="$(get_json qos)";                  [ -z "$QOS" ] && QOS=0
+
+# udevadm varsa çalıştır (opsiyonel)
+if command -v udevadm >/dev/null 2>&1; then
+  udevadm control --reload-rules || true
+  udevadm trigger || true
+fi
+
+echo "USBRelay MQTT Bridge starting..."
+echo "MQTT target: ${MQTT_HOST}:${MQTT_PORT} user=${MQTT_USER:-<none>} base_topic=${BASE_TOPIC}"
+
+# HTTP sadece teşhis için; kontrol MQTT'den
+exec uvicorn app:app --host 0.0.0.0 --port 8000 --no-access-log --log-level info
