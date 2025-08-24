@@ -1,28 +1,39 @@
 name: "USBRelay MQTT Bridge"
-version: "0.1.0"
 slug: "usbrelay_mqtt"
-description: "Bridges USB HID relay boards to MQTT for Home Assistant."
+version: "0.1.0"
+description: "Control USB HID relay boards via usbrelay and expose them to Home Assistant as switches using MQTT Discovery."
 arch:
   - aarch64
-  - amd64
   - armv7
-init: false
-startup: application
+  - amd64
+startup: services
 boot: auto
-ingress: false
+init: false
 usb: true
 udev: true
-icon: "icon.png"
-logo: "logo.png"
+host_network: true
+ingress: false
+devices:
+  - "/dev/bus/usb:/dev/bus/usb:rwm"
 options:
   mqtt_host: 172.30.32.1
   mqtt_port: 1883
-  mqtt_user: ""
+  mqtt_username: "mqtt"
   mqtt_password: ""
   base_topic: "usbrelay"
+  discovery_prefix: "homeassistant"
+  client_name: "usbrelay-bridge"
+  poll_seconds: 2
+  retain: false
+  qos: 0
 schema:
   mqtt_host: str
   mqtt_port: int
-  mqtt_user: str
-  mqtt_password: str
+  mqtt_username: str?
+  mqtt_password: password?
   base_topic: str
+  discovery_prefix: str
+  client_name: str
+  poll_seconds: int
+  retain: bool
+  qos: int
